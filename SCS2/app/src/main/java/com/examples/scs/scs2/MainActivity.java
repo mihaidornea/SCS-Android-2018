@@ -1,5 +1,6 @@
 package com.examples.scs.scs2;
 
+import android.annotation.SuppressLint;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
@@ -186,6 +187,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
         buttonEquals.setOnClickListener(new View.OnClickListener() {
+            @SuppressLint("SetTextI18n")
             @Override
             public void onClick(View view) {
                 String actual = result.getText().toString();
