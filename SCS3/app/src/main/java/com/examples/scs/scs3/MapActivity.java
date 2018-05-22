@@ -41,6 +41,7 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
@@ -91,7 +92,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     );
 
     private AutoCompleteTextView mSearchText;
-    private ImageView mGps;
+    private ImageView mGps, mInfo;
 
     //vars
     private Boolean mLocationPermissionsGranted = false;
@@ -100,6 +101,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     private PlaceAutocompleteAdapter mPlaceAutocompleteAdapter;
     private GoogleApiClient mGoogleApiClient;
     private PlaceInfo mPlace;
+    private Marker mMarker;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -107,6 +109,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         setContentView(R.layout.activity_map);
         mSearchText = findViewById(R.id.input_search);
         mGps = findViewById(R.id.ic_gps);
+        mInfo = findViewById(R.id.place_info);
         getLocationPermission();
     }
 
@@ -156,6 +159,35 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         }
     }
 
+    private void moveCamera(LatLng latLng, float zoom, PlaceInfo placeInfo){
+        Log.d(TAG, "moveCamera: moving the camera to: lat: " + latLng.latitude + ", lng: " + latLng.longitude );
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, zoom));
+
+        mMap.clear();
+
+        mMap.setInfoWindowAdapter(new CustomInfoWindowAdapter(MapActivity.this));
+
+        if (placeInfo!=null){
+            try{
+                String snipper = "Adress: " + placeInfo.getAddress() + "\n" +
+                        "Phone Number: " + placeInfo.getPhoneNumber() + "\n" +
+                        "Website: " + placeInfo.getWebsiteUri() + "\n" +
+                        "Price Rating: " + placeInfo.getRating();
+
+                MarkerOptions options = new MarkerOptions()
+                        .position(latLng)
+                        .title(placeInfo.getName())
+                        .snippet(snipper);
+                mMarker = mMap.addMarker(options);
+            }catch (NullPointerException e){
+                Log.e(TAG, "moveCamera: Errorr", e);
+            }
+            hideSoftKeyboard();
+        } else {
+            mMap.addMarker(new MarkerOptions().position(latLng));
+        }
+    }
+
     private void initMap(){
         Log.d(TAG, "initMap: initializing map");
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
@@ -195,6 +227,24 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 getDeviceLocation();
             }
         });
+
+        mInfo.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Log.d(TAG, "onClick: clicked place info");
+                try{
+                    if (mMarker.isInfoWindowShown()){
+                        mMarker.hideInfoWindow();
+                    } else {
+                        Log.d(TAG, "onClick: place info" + mPlace.toString());
+                        mMarker.showInfoWindow();
+                    }
+                }catch (NullPointerException e){
+                    Log.e(TAG, "onClick: NULL", e);
+                }
+            }
+        });
+
         hideSoftKeyboard();
     }
 
@@ -318,7 +368,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
             Log.d(TAG, "onResult: place details: " + mPlace.toString());
             moveCamera(new LatLng(place.getViewport().getCenter().latitude,
-                    place.getViewport().getCenter().longitude), DEFAULT_ZOOM, mPlace.getName());
+                    place.getViewport().getCenter().longitude), DEFAULT_ZOOM, mPlace);
 
             places.release();
         }
